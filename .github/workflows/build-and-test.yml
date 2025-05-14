@@ -1,0 +1,110 @@
+# This workflow automates testing and deployment for your project
+
+name: Build, Test, and Deploy
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events for the "main" branch
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # Job 1: Backend Testing
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Check out the code
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Python environment
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with: # Version range or exact version of Python or PyPy to use, using SemVer's version range syntax. Reads from .python-version if unset.
+    python-version: # optional
+    # File containing the Python version to use. Example: .python-version
+    python-version-file: # optional
+    # Used to specify a package manager for caching in the default directory. Supported values: pip, pipenv, poetry.
+    cache: # optional
+    # The target architecture (x86, x64, arm64) of the Python or PyPy interpreter.
+    architecture: # optional
+    # Set this option if you want the action to check for the latest available version that satisfies the version spec.
+    check-latest: # optional
+    # The token used to authenticate when fetching Python distributions from https://github.com/actions/python-versions. When running this action on github.com, the default value is sufficient. When running on GHES, you can pass a personal access token for github.com if you are experiencing rate limiting.
+    token: # optional, default is ${{ github.server_url == 'https://github.com' && github.token || '' }}
+    # Used to specify the path to dependency files. Supports wildcards or a list of file names for caching multiple dependencies.
+    cache-dependency-path: # optional
+    # Set this option if you want the action to update environment variables.
+    update-environment: # optional, default is true
+    # When 'true', a version range passed to 'python-version' input will match prerelease versions if no GA versions are found. Only 'x.y' version range is supported for CPython.
+    allow-prereleases: # optional
+    # When 'true', use the freethreaded version of Python.
+    freethreaded: # optional
+
+      # Step 3: Install dependencies
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 4: Run tests using pytest
+      - name: Run Python tests
+        run: |
+          pytest
+
+  # Job 2: Frontend Testing
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Check out the code
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      # Step 3: Install dependencies
+      - name: Install Node.js dependencies
+        run: npm install
+
+      # Step 4: Run tests using npm
+      - name: Run Node.js tests
+        run: npm test
+
+  # Job 3: Deployment
+  deploy:
+    # This job depends on the successful completion of both testing jobs
+    needs: [backend-tests, frontend-tests]
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Check out the code
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Step 2: Log in to Docker Hub (Replace with your credentials)
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Step 3: Build and push Docker image
+      - name: Build and push Docker image
+        run: |
+          docker build -t your-dockerhub-username/codened:latest .
+          docker push your-dockerhub-username/codened:latest
+
+      # Step 4: Deploy using Docker (Example: AWS ECS, Azure, or your server)
+      - name: Deploy to server
+        run: |
+          echo "Deploying the Docker image to the target platform..."
+          # Add deployment scripts here (e.g., ECS CLI commands, Azure CLI, etc.)
